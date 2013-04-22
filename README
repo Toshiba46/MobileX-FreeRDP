@@ -9,3 +9,5 @@ This is linked with libcommon.a and libxrdp.a from xrdp
 
 3. To start RDP Server type 
  java -Djava.library.path=/home/ashish/workspace/MobileX-FreeRDP/bin com/fisil/freerdp/app/RDPServer
+
+You have to Download freerdp and xrdp into third-party directory
