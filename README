@@ -1,0 +1,11 @@
+1. This project contains a basic JNI RDPServer.
+It is defined in com/fisil/freerdp/app directory.
+It is just one file.
+javac com/fisil/freerdp/app/RDPServer.java
+
+2. To compile JNI and xrdp sources, type ./compile.sh
+This creates libRDPServer.so
+This is linked with libcommon.a and libxrdp.a from xrdp
+
+3. To start RDP Server type 
+ java -Djava.library.path=/home/ashish/workspace/MobileX-FreeRDP/bin com/fisil/freerdp/app/RDPServer

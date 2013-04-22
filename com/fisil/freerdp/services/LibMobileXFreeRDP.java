@@ -1,0 +1,301 @@
+/*
+   MobileX FreeRDP JNI Wrapper
+   AuthorL Ashish Lal
+
+*/
+
+package com.fisil.freerdp.services;
+
+public class LibMobileXFreeRDP
+{
+	private static native int freerdp_new();
+	private static native void freerdp_free(int inst);
+	private static native void freerdp_listen(int inst);
+	private static native boolean freerdp_accept(int inst);
+	private static native boolean freerdp_connect(int inst);
+	private static native boolean freerdp_disconnect(int inst);
+	private static native void freerdp_cancel_connection(int inst);
+	
+	private static native void freerdp_set_connection_info(int inst,
+		String hostname, String username, String password, String domain,
+		int width, int height, int color_depth, int port, boolean console,
+		int security, String certname);
+
+	private static native void freerdp_set_performance_flags(int inst,
+		boolean remotefx, boolean disableWallpaper, boolean disableFullWindowDrag,
+		boolean disableMenuAnimations, boolean disableTheming,
+		boolean enableFontSmoothing, boolean enableDesktopComposition);
+
+	private static native void freerdp_set_advanced_settings(int inst, String remoteProgram, String workDir);
+	
+	private static native void freerdp_set_data_directory(int inst, String directory);
+	
+	private static native boolean freerdp_update_graphics(int inst,
+			Bitmap bitmap, int x, int y, int width, int height);
+	
+	private static native void freerdp_send_cursor_event(int inst, int x, int y, int flags);
+	private static native void freerdp_send_key_event(int inst, int keycode, boolean down);
+	private static native void freerdp_send_unicodekey_event(int inst, int keycode);
+
+	private static native String freerdp_get_version();
+	
+	public class Rdp_set {
+
+	    char hostname[16];
+	    int width;
+	    int height;
+	    char server[64];
+	    char domain[16];
+	    char password[64];
+	    char shell[256];
+	    char directory[256];
+	    char username[256];
+	    int tcp_port_rdp;
+	    int keyboard_layout;
+	    int keyboard_type;
+	    int keyboard_subtype;
+	    int keyboard_functionkeys;
+	    char xkb_layout[32];
+	    char xkb_variant[32];
+	    int encryption;
+	    int rdp_version;
+	    int remote_app;
+	    int console_session;
+	    int server_depth;
+	    int bitmap_cache;
+	    int bitmap_cache_persist_enable;
+	    int bitmap_cache_precache;
+	    int bitmap_compression;
+	    int rdp5_performanceflags;
+	    int desktop_save;
+	    int polygon_ellipse_orders;
+	    char codepage[16];
+	    int autologin;
+	    int off_screen_bitmaps;
+	    int triblt;
+	};
+	
+	public class Connection {
+	  /* common */
+	  void * handle; /* pointer to self as long */
+	  void * wm;
+	  void * painter;
+	  int sck;
+	  /* mod data */
+	  int width;
+	  int height;
+	  int bpp;
+	  Rdp_set* settings;
+	  //struct rdp_inst* inst;
+	  private int cmap[256];
+	};
+	
+	private static final String TAG = "LibMobileXFreeRDP";
+
+	public static interface EventListener
+	{
+		void OnConnectionSuccess(int instance);
+		void OnConnectionFailure(int instance);
+		void OnDisconnecting(int instance);
+		void OnDisconnected(int instance);
+	}
+
+	public static interface UIEventListener
+	{
+		void OnSettingsChanged(int width, int height, int bpp);
+		boolean OnAuthenticate(StringBuilder username, StringBuilder domain, StringBuilder password);
+		boolean OnVerifiyCertificate(String subject, String issuer, String fingerprint);
+		void OnGraphicsUpdate(int x, int y, int width, int height);		
+		void OnGraphicsResize(int width, int height, int bpp);		
+	}
+
+	public static interface RDPServer
+	{
+		
+	}
+	
+	private static EventListener listener;
+
+	public static void setEventListener(EventListener l)
+	{
+		listener = l;		
+	}
+	
+	public static int newInstance()
+	{
+		return freerdp_new();
+	}
+
+	public static void freeInstance(int inst)
+	{
+		freerdp_free(inst);
+	}
+
+	public static boolean connect(int inst)
+	{
+		return freerdp_connect(inst);
+	}
+
+	public static boolean disconnect(int inst)
+	{
+		return freerdp_disconnect(inst);
+	}
+
+	public static void cancelConnection(int inst)
+	{
+		freerdp_cancel_connection(inst);
+	}
+
+	public static boolean setConnectionInfo(int inst, Connection conn)
+	{
+		conn.ScreenSettings screenSettings = conn.getActiveScreenSettings();
+		
+		int port;
+		String hostname;
+		String certName = "";
+		if(conn.getType() == conn.TYPE_MANUAL)
+		{
+			port = conn.<ManualConnection>get().getPort();			
+			hostname = conn.<ManualConnection>get().getHostname();			
+		}
+		else
+		{
+			assert false;
+			return false;
+		}
+
+		freerdp_set_connection_info(inst,
+			hostname,
+			conn.getUsername(),
+			conn.getPassword(),
+			conn.getDomain(),
+			screenSettings.getWidth(),
+			screenSettings.getHeight(),
+			screenSettings.getColors(),
+			port,
+			conn.getAdvancedSettings().getConsoleMode(),
+			conn.getAdvancedSettings().getSecurity(),
+			certName);
+
+		Connection.PerformanceFlags flags = conn.getActivePerformanceFlags();
+		freerdp_set_performance_flags(inst,
+				flags.getRemoteFX(),
+				!flags.getWallpaper(),
+				!flags.getFullWindowDrag(),
+				!flags.getMenuAnimations(),
+				!flags.getTheming(),
+				flags.getFontSmoothing(),
+				flags.getDesktopComposition());
+		
+		Connection.AdvancedSettings advancedSettings = bookmark.getAdvancedSettings();
+		freerdp_set_advanced_settings(inst, advancedSettings.getRemoteProgram(), advancedSettings.getWorkDir());
+
+		return true;
+	}
+	
+	public static void setDataDirectory(int inst, String directory)
+	{
+		freerdp_set_data_directory(inst, directory);
+	}
+	
+	public static boolean updateGraphics(int inst, Bitmap bitmap, int x, int y, int width, int height)
+	{
+		return freerdp_update_graphics(inst, bitmap, x, y, width, height);
+	}		
+	
+	public static void sendCursorEvent(int inst, int x, int y, int flags)
+	{
+		freerdp_send_cursor_event(inst, x, y, flags);
+	}
+
+	public static void sendKeyEvent(int inst, int keycode, boolean down)
+	{
+		freerdp_send_key_event(inst, keycode, down);
+	}
+
+	public static void sendUnicodeKeyEvent(int inst, int keycode)
+	{
+		freerdp_send_unicodekey_event(inst, keycode);
+	}
+
+	private static void OnConnectionSuccess(int inst)
+	{		
+		if (listener != null)
+			listener.OnConnectionSuccess(inst);
+	}
+
+	private static void OnConnectionFailure(int inst)
+	{
+		if (listener != null)
+			listener.OnConnectionFailure(inst);
+	}
+
+	private static void OnDisconnecting(int inst)
+	{		
+		if (listener != null)
+			listener.OnDisconnecting(inst);
+	}
+
+	private static void OnDisconnected(int inst)
+	{		
+		if (listener != null)
+			listener.OnDisconnected(inst);
+	}
+
+	private static void OnSettingsChanged(int inst, int width, int height, int bpp)
+	{		
+		SessionState s = MobileXApp.getSession(inst);
+		if (s == null)
+			return;
+		UIEventListener uiEventListener = s.getUIEventListener();
+		if (uiEventListener != null)
+			uiEventListener.OnSettingsChanged(width, height, bpp);
+	}
+
+	private static boolean OnAuthenticate(int inst, StringBuilder username, StringBuilder domain, StringBuilder password)
+	{
+		SessionState s = MobileXApp.getSession(inst);
+		if (s == null)
+			return false;
+		UIEventListener uiEventListener = s.getUIEventListener();
+		if (uiEventListener != null)
+			return uiEventListener.OnAuthenticate(username, domain, password);
+		return false;
+	}
+
+	private static boolean OnVerifyCertificate(int inst, String subject, String issuer, String fingerprint)
+	{
+		SessionState s = MobileXApp.getSession(inst);
+		if (s == null)
+			return false;
+		UIEventListener uiEventListener = s.getUIEventListener();
+		if (uiEventListener != null)
+			return uiEventListener.OnVerifiyCertificate(subject, issuer, fingerprint);
+		return false;
+	}
+
+	private static void OnGraphicsUpdate(int inst, int x, int y, int width, int height)
+	{
+		SessionState s = MobileXApp.getSession(inst);
+		if (s == null)
+			return;
+		UIEventListener uiEventListener = s.getUIEventListener();
+		if (uiEventListener != null)
+			uiEventListener.OnGraphicsUpdate(x, y, width, height);
+	}
+
+	private static void OnGraphicsResize(int inst, int width, int height, int bpp)
+	{
+		SessionState s = MobileXApp.getSession(inst);
+		if (s == null)
+			return;
+		UIEventListener uiEventListener = s.getUIEventListener();
+		if (uiEventListener != null)
+			uiEventListener.OnGraphicsResize(width, height, bpp);
+	}
+	
+	public static String getVersion()
+	{
+		return freerdp_get_version();
+	}
+}
